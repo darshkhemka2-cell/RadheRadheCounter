@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#8f2451">
+<meta name="description" content="A peaceful Radhe Radhe naam-jap counter with a 108-bead mala tracker.">
+<link rel="manifest" href="manifest.json">
+<title>Radhe Radhe Counter</title>
+<style>
+:root{--wine:#8f2451;--pink:#f7d7e4;--cream:#fffaf0;--gold:#d99b32;--ink:#57213a}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at top,#fff5e7,#f6c9d9 70%,#edb0c7);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink);display:flex;justify-content:center;align-items:center;padding:18px}
+.app{width:min(100%,420px);background:rgba(255,250,240,.94);border:1px solid #fff;border-radius:28px;padding:26px 22px;box-shadow:0 16px 45px #70234225;text-align:center}
+.lotus{font-size:36px}.eyebrow{letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:#a35a73;font-weight:700;margin:5px 0}
+h1{font-size:clamp(28px,8vw,38px);margin:6px 0;color:var(--wine)}.subtitle{margin:0 0 22px;color:#89566a}
+.count{font-size:clamp(60px,18vw,82px);line-height:1.1;font-weight:800;color:var(--wine);font-variant-numeric:tabular-nums;margin:16px 0 5px}
+.small{font-size:14px;color:#98677a}.primary{border:0;border-radius:22px;background:linear-gradient(135deg,#a92d61,#7f1d49);color:white;width:100%;padding:19px 12px;font-size:23px;font-weight:750;box-shadow:0 6px 0 #5f1737;cursor:pointer;touch-action:manipulation;user-select:none}
+.primary:active{transform:translateY(3px);box-shadow:0 3px 0 #5f1737}.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0}.stat{background:#fff0f5;border-radius:16px;padding:12px}.stat strong{display:block;font-size:22px;color:var(--wine)}.stat span{font-size:12px;color:#98677a}
+.section{margin-top:17px;text-align:left}.section-head{display:flex;justify-content:space-between;align-items:center;font-weight:750;margin-bottom:10px}.beads{display:grid;grid-template-columns:repeat(12,1fr);gap:5px}.bead{aspect-ratio:1;border-radius:50%;background:#ead7de;border:1px solid #d8bac6}.bead.done{background:var(--gold);border-color:#c08120;box-shadow:inset 0 1px 2px #fff8}
+.progress{height:8px;background:#f0dce4;border-radius:99px;overflow:hidden;margin-top:12px}.bar{height:100%;width:0;background:linear-gradient(90deg,#d99b32,#efbf58);transition:width .15s}
+.controls{display:flex;gap:9px;margin-top:18px}.secondary{flex:1;border:1px solid #e5c4d1;background:#fff8fb;color:var(--wine);border-radius:13px;padding:12px 8px;font-weight:650;cursor:pointer}
+.target{display:flex;align-items:center;gap:10px}.target input{width:85px;padding:8px;border:1px solid #e5c4d1;border-radius:10px;font:inherit;color:var(--ink)}.target button{padding:8px 12px;border:0;border-radius:10px;background:#f3d5e0;color:var(--wine);font-weight:700}
+.footer{font-size:13px;margin-top:22px;color:#a05e78}
+button:focus-visible,input:focus-visible{outline:3px solid #e2a63f;outline-offset:3px}
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="lotus" aria-hidden="true">🪷 🙏 🪷</div>
+  <div class="eyebrow">Naam Jap Counter</div>
+  <h1>राधे राधे</h1>
+  <p class="subtitle">Take a peaceful moment for naam jap</p>
+  <div class="count" id="count" aria-live="polite">0</div>
+  <div class="small">total chants</div>
+  <button class="primary" id="chant" aria-label="Count one Radhe Radhe chant">राधे राधे ❤️</button>
+  <div class="stats">
+    <div class="stat"><strong id="round">0 / 108</strong><span>Current mala</span></div>
+    <div class="stat"><strong id="today">0</strong><span>Today's chants</span></div>
+  </div>
+  <section class="section">
+    <div class="section-head"><span>📿 108-bead mala</span><span id="beadLabel">0 of 108</span></div>
+    <div class="beads" id="beads" aria-label="108 bead progress"></div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+  </section>
+  <section class="section">
+    <div class="section-head"><label for="target">🎯 Daily target</label><div class="target"><input id="target" type="number" min="1" max="1000000" step="1" value="108"><button id="saveTarget">Save</button></div></div>
+    <div class="progress"><div class="bar" id="targetBar"></div></div>
+    <div class="small" id="targetText" style="margin-top:7px">0 of 108 today</div>
+  </section>
+  <div class="controls">
+    <button class="secondary" id="undo">↩ Undo one</button>
+    <button class="secondary" id="reset">Reset total</button>
+  </div>
+  <div class="footer">जय श्री राधे 🌸 Your count is saved on this device.</div>
+</main>
+<script>
+const KEY="radhe-counter-v1";
+const todayKey=()=>new Date().toLocaleDateString("en-CA");
+let state;
+try { state=JSON.parse(localStorage.getItem(KEY)) || {}; } catch { state={}; }
+state.total=Math.max(0,Number(state.total)||0);
+state.day=state.day||todayKey();
+state.today=state.day===todayKey()?Math.max(0,Number(state.today)||0):0;
+state.day=todayKey();
+state.target=Math.max(1,Number(state.target)||108);
+const $=id=>document.getElementById(id);
+const beads=$("beads");
+for(let i=0;i<108;i++){const b=document.createElement("span");b.className="bead";b.title=`Bead ${i+1}`;beads.appendChild(b);}
+function save(){localStorage.setItem(KEY,JSON.stringify(state));}
+function render(){
+ const round=state.total%108;
+ $("count").textContent=state.total.toLocaleString();
+ $("round").textContent=`${round} / 108`;
+ $("today").textContent=state.today.toLocaleString();
+ $("beadLabel").textContent=`${round} of 108`;
+ [...beads.children].forEach((b,i)=>b.classList.toggle("done",i<round));
+ $("bar").style.width=(round/108*100)+"%";
+ $("target").value=state.target;
+ $("targetBar").style.width=Math.min(100,state.today/state.target*100)+"%";
+ $("targetText").textContent=`${state.today.toLocaleString()} of ${state.target.toLocaleString()} today`;
+}
+function refreshDay(){if(state.day!==todayKey()){state.day=todayKey();state.today=0;}}
+$("chant").addEventListener("click",()=>{refreshDay();state.total++;state.today++;save();render();});
+$("undo").addEventListener("click",()=>{if(state.total>0){state.total--;state.today=Math.max(0,state.today-1);save();render();}});
+$("reset").addEventListener("click",()=>{if(confirm("Reset your total count to zero?")){state.total=0;state.today=0;save();render();}});
+$("saveTarget").addEventListener("click",()=>{const n=Math.floor(Number($("target").value));if(Number.isFinite(n)&&n>=1&&n<=1000000){state.target=n;save();render();}else{alert("Please enter a target from 1 to 1,000,000.");}});
+render();
+if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+</body>
+</html>
